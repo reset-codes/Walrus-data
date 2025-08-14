@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const scheduler = require('./utils/scheduler');
 require('dotenv').config();
 
 const app = express();
@@ -28,6 +29,7 @@ app.get('/health', (req, res) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
+  const schedulerStatus = scheduler.getStatus();
   res.json({ 
     message: 'Walrus Data API',
     version: '1.0.0',
@@ -35,6 +37,11 @@ app.get('/', (req, res) => {
       health: '/health',
       walrusData: '/api/walrus-data',
       lastUpdate: '/api/last-update'
+    },
+    scheduler: {
+      nextUpdate: schedulerStatus.nextRun,
+      lastUpdate: schedulerStatus.lastRun,
+      cacheStatus: schedulerStatus.cacheStatus
     }
   });
 });
@@ -53,4 +60,20 @@ app.listen(PORT, () => {
   console.log(`🚀 Walrus API Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔗 API endpoints: http://localhost:${PORT}/api`);
+  
+  // Start the daily scheduler
+  scheduler.start();
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n🛑 Shutting down server...');
+  scheduler.stop();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n🛑 Shutting down server...');
+  scheduler.stop();
+  process.exit(0);
 });

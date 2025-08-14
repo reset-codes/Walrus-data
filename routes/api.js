@@ -24,8 +24,8 @@ router.get('/walrus-data', async (req, res) => {
     const freshData = await walrusScraper.scrapeWalrusData();
     
     if (freshData) {
-      // Cache the fresh data for 1 hour
-      cache.set('walrus-data', freshData, 3600); // 1 hour in seconds
+      // Cache the fresh data for 24 hours (daily updates)
+      cache.set('walrus-data', freshData, 86400); // 24 hours in seconds
       
       return res.json({
         success: true,
@@ -52,45 +52,9 @@ router.get('/walrus-data', async (req, res) => {
   }
 });
 
-// Force refresh data (for testing)
-router.post('/refresh', async (req, res) => {
-  try {
-    console.log('🔄 Force refreshing Walrus data...');
-    
-    // Clear cache
-    cache.del('walrus-data');
-    
-    // Scrape fresh data
-    const freshData = await walrusScraper.scrapeWalrusData();
-    
-    if (freshData) {
-      // Cache the fresh data
-      cache.set('walrus-data', freshData, 3600);
-      
-      res.json({
-        success: true,
-        message: 'Data refreshed successfully',
-        data: freshData,
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(503).json({
-        success: false,
-        error: 'Failed to refresh data',
-        timestamp: new Date().toISOString()
-      });
-    }
-  } catch (error) {
-    console.error('❌ Error in /refresh:', error.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to refresh data',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
 
-// Get last update time
+
+// Get last update time and scheduler status
 router.get('/last-update', (req, res) => {
   const lastUpdate = cache.getTimestamp('walrus-data');
   
@@ -98,6 +62,7 @@ router.get('/last-update', (req, res) => {
     success: true,
     lastUpdate: lastUpdate || null,
     cacheStatus: lastUpdate ? 'active' : 'empty',
+    updateSchedule: 'Daily at 00:00 UTC',
     timestamp: new Date().toISOString()
   });
 });
