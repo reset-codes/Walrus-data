@@ -15,7 +15,7 @@ class WalrusScraper {
     try {
       console.log('🚀 Starting Walrus data scrape...');
       
-      // Launch browser with optimized settings
+      // Launch browser with secure and resource-optimized settings for Render.com
       browser = await puppeteer.launch({
         headless: 'new',
         args: [
@@ -26,9 +26,29 @@ class WalrusScraper {
           '--no-first-run',
           '--no-zygote',
           '--disable-gpu',
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor'
-        ]
+          '--disable-background-networking',
+          '--disable-background-timer-throttling',
+          '--disable-renderer-backgrounding',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-client-side-phishing-detection',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-default-apps',
+          '--disable-extensions',
+          '--disable-features=TranslateUI,VizDisplayCompositor',
+          '--disable-hang-monitor',
+          '--disable-ipc-flooding-protection',
+          '--disable-popup-blocking',
+          '--disable-prompt-on-repost',
+          '--disable-sync',
+          '--metrics-recording-only',
+          '--no-default-browser-check',
+          '--safebrowsing-disable-auto-update',
+          '--memory-pressure-off',
+          '--max_old_space_size=400'
+        ],
+        // Resource limits for free tier deployment
+        defaultViewport: { width: 1280, height: 720 },
+        timeout: 30000
       });
 
       // Try each URL until one works
@@ -306,15 +326,34 @@ class WalrusScraper {
   }
 
   validateData(data) {
-    // Check if we have at least 2 out of 4 data points
-    const validFields = [
-      data.storagePrice?.value,
-      data.writePrice?.value,
-      data.storageCapacity?.used || data.storageCapacity?.percentage,
-      data.epoch?.number
-    ].filter(field => field !== null && field !== undefined);
+    // More strict validation to ensure real data quality
+    const hasStoragePrice = data.storagePrice?.value && data.storagePrice?.value > 0;
+    const hasWritePrice = data.writePrice?.value && data.writePrice?.value > 0;
+    const hasStorageCapacity = (data.storageCapacity?.used && data.storageCapacity?.total) || 
+                              (data.storageCapacity?.percentage && data.storageCapacity?.percentage > 0);
+    const hasEpoch = data.epoch?.number && data.epoch?.number > 0;
 
-    return validFields.length >= 2;
+    const validFields = [hasStoragePrice, hasWritePrice, hasStorageCapacity, hasEpoch]
+      .filter(Boolean);
+
+    // Prefer real-time data over fallback
+    const isRealTimeData = data.dataSource === 'realtime';
+    
+    // Require at least 3 fields for high confidence, or 2 fields if real-time
+    return isRealTimeData ? validFields.length >= 2 : validFields.length >= 3;
+  }
+
+  // Enhanced validation for production use
+  validateDataStrict(data) {
+    if (!data || typeof data !== 'object') return false;
+
+    // Ensure all critical fields exist and have reasonable values
+    const storageValid = data.storagePrice?.value >= 1000 && data.storagePrice?.value <= 100000;
+    const writeValid = data.writePrice?.value >= 1000 && data.writePrice?.value <= 100000;
+    const capacityValid = data.storageCapacity?.percentage >= 0 && data.storageCapacity?.percentage <= 100;
+    const epochValid = data.epoch?.number >= 1 && data.epoch?.number <= 10000;
+
+    return storageValid && writeValid && capacityValid && epochValid;
   }
 
   // Test method to check if scraping is working

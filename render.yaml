@@ -1,0 +1,31 @@
+# Render.com Configuration File
+services:
+  - type: web
+    name: walrus-api
+    env: node
+    plan: free  # Free tier configuration
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CACHE_TTL
+        value: 86400
+      - key: MAX_CACHE_SIZE
+        value: 50
+      - key: MAX_MEMORY_USAGE
+        value: 104857600
+      - key: LOG_LEVEL
+        value: info
+      - key: HEALTH_CHECK_TIMEOUT
+        value: 5000
+    # Health check endpoint for Render.com
+    healthCheckPath: /health
+    # Auto-deploy from main branch
+    autoDeploy: true
+    # Resource limits for free tier
+    disk: 1GB
+    # Environment-specific settings
+    branch: main
