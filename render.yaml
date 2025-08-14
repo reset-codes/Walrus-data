@@ -1,0 +1,35 @@
+# Render.com Configuration File
+services:
+  - type: web
+    name: walrus-api
+    env: node
+    plan: free
+    # Optimized for free tier (512MB RAM limit)
+    buildCommand: npm install --production
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # - key: FRONTEND_URL_PROD
+        # value: https://your-frontend-domain.com
+      - key: SCRAPE_TIMEOUT
+        value: 45000
+      - key: CACHE_TTL
+        value: 86400
+      - key: MAX_CACHE_SIZE
+        value: 30
+      - key: MAX_MEMORY_USAGE
+        value: 83886080
+      - key: LOG_LEVEL
+        value: info
+      - key: HEALTH_CHECK_TIMEOUT
+        value: 10000
+    # Health check configuration
+    healthCheckPath: /health
+    # Auto-deploy settings
+    autoDeploy: true
+    branch: main
+    # Free tier optimizations
+    disk: 1GB

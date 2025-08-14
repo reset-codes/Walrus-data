@@ -12,16 +12,25 @@ class WalrusScheduler {
   // Start the daily scheduler at 00:00 UTC
   start() {
     console.log('🕐 Starting Walrus data scheduler...');
+    console.log(`🌍 Current UTC time: ${new Date().toISOString()}`);
     
     // Schedule daily scraping at 00:00 UTC
     // Cron format: second minute hour day month dayOfWeek
     // '0 0 0 * * *' = every day at 00:00:00 UTC
     this.cronJob = cron.schedule('0 0 0 * * *', async () => {
+      console.log(`🕐 Scheduled scrape triggered at UTC: ${new Date().toISOString()}`);
       await this.performDailyScrape();
     }, {
       scheduled: true,
       timezone: 'UTC'
     });
+
+    // Verify cron job is properly scheduled
+    if (this.cronJob) {
+      console.log('✅ Cron job created successfully');
+      console.log(`🕐 Cron timezone: UTC`);
+      console.log(`🕐 Cron expression: '0 0 0 * * *' (daily at 00:00 UTC)`);
+    }
 
     // Calculate next run time
     this.updateNextRunTime();
@@ -31,6 +40,9 @@ class WalrusScheduler {
     
     console.log('✅ Scheduler started successfully');
     console.log(`📅 Next scheduled scrape: ${this.nextRun}`);
+    
+    // Verify scheduling accuracy
+    this.verifyScheduling();
   }
 
   // Stop the scheduler
@@ -55,7 +67,7 @@ class WalrusScheduler {
       console.log('🚀 Starting scheduled daily scrape at', this.lastRun);
       
       // Clear existing cache
-      cache.del('walrus-data');
+      cache.delete('walrus-data');
       
       // Scrape fresh data
       const freshData = await walrusScraper.scrapeWalrusData();
@@ -102,14 +114,39 @@ class WalrusScheduler {
     this.nextRun = tomorrow.toISOString();
   }
 
+  // Verify scheduling accuracy
+  verifyScheduling() {
+    const now = new Date();
+    const currentUTC = now.toISOString();
+    const currentHour = now.getUTCHours();
+    const currentMinute = now.getUTCMinutes();
+    
+    console.log(`🔍 Scheduling verification:`);
+    console.log(`   Current UTC: ${currentUTC}`);
+    console.log(`   Current UTC hour: ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
+    console.log(`   Next run: ${this.nextRun}`);
+    
+    // Calculate time until next run
+    if (this.nextRun) {
+      const nextRunTime = new Date(this.nextRun);
+      const timeUntilNext = nextRunTime.getTime() - now.getTime();
+      const hoursUntilNext = Math.floor(timeUntilNext / (1000 * 60 * 60));
+      const minutesUntilNext = Math.floor((timeUntilNext % (1000 * 60 * 60)) / (1000 * 60));
+      
+      console.log(`   Time until next run: ${hoursUntilNext}h ${minutesUntilNext}m`);
+    }
+  }
+
   // Get scheduler status
   getStatus() {
     return {
       isRunning: this.isRunning,
       lastRun: this.lastRun,
       nextRun: this.nextRun,
+      currentUTC: new Date().toISOString(),
       cacheStatus: cache.get('walrus-data') ? 'active' : 'empty',
-      cacheTimestamp: cache.getTimestamp('walrus-data')
+      cacheTimestamp: cache.getTimestamp('walrus-data'),
+      cronJobActive: this.cronJob ? this.cronJob.running : false
     };
   }
 }
