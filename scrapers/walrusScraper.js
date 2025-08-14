@@ -18,7 +18,6 @@ class WalrusScraper {
       // Launch browser with secure and resource-optimized settings for Render.com
       browser = await puppeteer.launch({
         headless: 'new',
-        executablePath: process.env.NODE_ENV === 'production' ? '/opt/render/project/.render/chrome/opt/google/chrome/chrome' : undefined,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
