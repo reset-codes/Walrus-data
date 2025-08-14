@@ -84,7 +84,7 @@ const validateAndSanitizeData = (data) => {
   return sanitized;
 };
 
-// Get Walrus data (cached) - with enhanced validation and circuit breaker
+// Get Walrus data (cached) - with enhanced validation and fallback data
 router.get('/walrus-data', async (req, res) => {
   const startTime = Date.now();
   
@@ -135,13 +135,46 @@ router.get('/walrus-data', async (req, res) => {
       }
     }
 
-    // If scraping fails or data is invalid, return error
-    res.status(503).json({
-      success: false,
-      error: 'Unable to fetch valid Walrus data at the moment. Please try again later.',
+    // Fallback: Return static data with warning if scraping fails
+    console.log('⚠️ Scraping failed, using fallback data');
+    const fallbackData = {
+      storagePrice: {
+        value: 11000,
+        unit: 'FROST/MiB/EPOCH',
+        display: '11,000'
+      },
+      writePrice: {
+        value: 20000,
+        unit: 'FROST/MiB',
+        display: '20,000'
+      },
+      storageCapacity: {
+        used: 644,
+        total: 4167,
+        percentage: 15.46,
+        display: '644 / 4,167 TB',
+        usedDisplay: '644 TB',
+        totalDisplay: '4,167 TB',
+        percentageDisplay: '15.46%'
+      },
+      epoch: {
+        number: 150,
+        display: 'Epoch 150'
+      },
+      dataSource: 'fallback',
+      timestamp: new Date().toISOString()
+    };
+
+    // Cache fallback data for 1 hour
+    cache.set('walrus-data', fallbackData, 3600);
+
+    return res.json({
+      success: true,
+      data: fallbackData,
+      source: 'fallback',
       timestamp: new Date().toISOString(),
       responseTime: `${Date.now() - startTime}ms`,
-      retryAfter: '5 minutes'
+      warning: 'Using fallback data - scraping temporarily unavailable'
     });
 
   } catch (error) {
@@ -172,6 +205,28 @@ router.get('/last-update', (req, res) => {
     updateSchedule: 'Daily at 00:00 UTC',
     timestamp: new Date().toISOString()
   });
+});
+
+// Test endpoint to check scraper status
+router.get('/test-scraper', async (req, res) => {
+  try {
+    console.log('🧪 Testing scraper functionality...');
+    const testResult = await walrusScraper.testScrape();
+    
+    res.json({
+      success: true,
+      scraperWorking: testResult !== null,
+      data: testResult,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      scraperWorking: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 module.exports = router;

@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const simpleScraper = require('./simpleScraper');
 
 class WalrusScraper {
   constructor() {
@@ -68,8 +69,18 @@ class WalrusScraper {
         }
       }
       
-      console.log('❌ All URLs failed');
-      return null;
+      console.log('❌ All URLs failed, trying simple scraper...');
+      
+      // Try simple scraper as fallback
+      const simpleData = await simpleScraper.fetchWalrusData();
+      if (simpleData) {
+        console.log('✅ Simple scraper succeeded');
+        return simpleData;
+      }
+      
+      // If simple scraper also fails, use estimated data
+      console.log('⚠️ Using estimated data as final fallback');
+      return simpleScraper.getEstimatedData();
 
     } catch (error) {
       console.error('❌ Scraping error:', error.message);
